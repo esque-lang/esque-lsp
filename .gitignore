@@ -1,0 +1,19 @@
+# Build outputs
+/esque-lsp
+*.test
+*.out
+
+# Release tarball staging
+/dist/
+
+# Nix
+/result
+/result-*
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
