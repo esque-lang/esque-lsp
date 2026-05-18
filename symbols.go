@@ -104,11 +104,34 @@ func parseFnDecl(toks []Tok, i int, attrs []string) (*FnSymbol, int) {
 		return fn, j - 1
 	}
 	j++ // past (
+	// Only the first ident after `(` or each `,` is a parameter name;
+	// subsequent idents on the same arg slot belong to the type (`i32`,
+	// `f32`, or a shape variable like the `N` in `f32[N]`). Brackets
+	// must be skipped wholesale so shape arithmetic inside a type
+	// (e.g. `f32[M + 1]`) doesn't leak into Params.
+	expectName := true
+	bracketDepth := 0
 	for j < len(toks) && toks[j].Kind != TkRParen {
-		if toks[j].Kind == TkIdent {
-			fn.Params = append(fn.Params, toks[j].Lit)
+		switch toks[j].Kind {
+		case TkEOF:
+			j = len(toks)
+		case TkLBracket:
+			bracketDepth++
+		case TkRBracket:
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case TkComma:
+			if bracketDepth == 0 {
+				expectName = true
+			}
+		case TkIdent:
+			if bracketDepth == 0 && expectName {
+				fn.Params = append(fn.Params, toks[j].Lit)
+				expectName = false
+			}
 		}
-		if toks[j].Kind == TkEOF {
+		if j >= len(toks) {
 			break
 		}
 		j++
