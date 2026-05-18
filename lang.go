@@ -48,8 +48,9 @@ var typeDocs = map[string]string{
 var operatorDocs = map[string]string{
 	"|>":  "Pipeline. `x |> f` desugars to `f(x)`. `x |> f(y)` desugars to `f(x, y)`. Left associative.",
 	"+/":  "Sum reduction over a tensor.",
+	"-/":  "Subtraction reduction over a tensor (left fold).",
 	"*/":  "Product reduction over a tensor.",
-	"-/":  "Subtraction reduction over a tensor.",
+	"//":  "Division reduction over a tensor (left fold).",
 	".+":  "Element-wise tensor addition.",
 	".-":  "Element-wise tensor subtraction.",
 	".*":  "Element-wise tensor multiplication.",
@@ -116,7 +117,7 @@ func hoverFor(tok *Tok, doc *Document) string {
 			return mdKeyword("@"+tok.Lit, d)
 		}
 		return mdKeyword("@"+tok.Lit, "Attribute (user-defined or unknown).")
-	case TkPipeArrow, TkPlusSlash, TkStarSlash, TkMinusSlash,
+	case TkPipeArrow, TkPlusSlash, TkMinusSlash, TkStarSlash, TkSlashSlash,
 		TkDotPlus, TkDotMinus, TkDotStar, TkDotSlash, TkDotPercent,
 		TkAt, TkDotDot, TkDotDotEq:
 		if d, ok := operatorDocs[tok.Lit]; ok {
