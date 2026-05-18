@@ -84,7 +84,7 @@ scope = "source.esque"
 file-types = ["esq"]
 roots = ["go.mod", ".git"]
 language-servers = ["esque-lsp"]
-comment-token = "//"
+comment-token = "#"
 
 [language-server.esque-lsp]
 command = "esque-lsp"
