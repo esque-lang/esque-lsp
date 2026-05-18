@@ -20,7 +20,7 @@ files gracefully while you are typing.
 
 ## Requirements
 
-- Go 1.22 or newer.
+- Go 1.25 or newer.
 
 That is the only build dependency. The server uses only the Go
 standard library.
