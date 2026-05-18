@@ -84,6 +84,56 @@ fn main() -> i32 = {
 	}
 }
 
+// TestLexerLineCommentHash locks in the v0.14 line-comment syntax:
+// `#` opens a line comment that ends at newline, and the surrounding
+// program lexes as if the comment were whitespace.
+func TestLexerLineCommentHash(t *testing.T) {
+	src := "# preface\nfn main() -> i32 = 0  # tail\n"
+	toks, errs := NewLexer([]byte(src)).All()
+	if len(errs) != 0 {
+		t.Fatalf("unexpected lex errors: %v", errs)
+	}
+	want := []TokKind{
+		TkFn, TkIdent, TkLParen, TkRParen, TkArrow, TkIdent, TkEq,
+		TkInt, TkEOF,
+	}
+	if len(toks) != len(want) {
+		t.Fatalf("got %d tokens, want %d: %v", len(toks), len(want), toks)
+	}
+	for i, k := range want {
+		if toks[i].Kind != k {
+			t.Errorf("tok[%d] = %d, want %d", i, toks[i].Kind, k)
+		}
+	}
+}
+
+// TestLexerReduceOps pins down all four reduction-prefix operators
+// emitted as distinct token kinds. Before v0.14, `//` was a comment
+// lead-in and `TkSlashSlash` was unreachable; the # comment swap made
+// it live.
+func TestLexerReduceOps(t *testing.T) {
+	src := `+/xs -/ys */zs //ws`
+	toks, errs := NewLexer([]byte(src)).All()
+	if len(errs) != 0 {
+		t.Fatalf("unexpected lex errors: %v", errs)
+	}
+	want := []TokKind{
+		TkPlusSlash, TkIdent,
+		TkMinusSlash, TkIdent,
+		TkStarSlash, TkIdent,
+		TkSlashSlash, TkIdent,
+		TkEOF,
+	}
+	if len(toks) != len(want) {
+		t.Fatalf("got %d tokens, want %d: %v", len(toks), len(want), toks)
+	}
+	for i, k := range want {
+		if toks[i].Kind != k {
+			t.Errorf("tok[%d] = %d, want %d", i, toks[i].Kind, k)
+		}
+	}
+}
+
 func contains(s []string, v string) bool {
 	for _, x := range s {
 		if x == v {

@@ -171,7 +171,10 @@ func (l *Lexer) skipWS() {
 		switch {
 		case c == ' ' || c == '\t' || c == '\n' || c == '\r':
 			l.advance()
-		case c == '/' && l.peek2() == '/':
+		case c == '#':
+			// `#` opens a line comment that runs to the end of the line.
+			// Line comments switched from `//` to `#` in v0.14 so that
+			// `//` is free as the divide-reduction operator (TkSlashSlash).
 			for l.off < len(l.src) && l.peek() != '\n' {
 				l.advance()
 			}
@@ -342,11 +345,9 @@ func (l *Lexer) Next() Tok {
 	case '/':
 		l.advance()
 		if l.peek() == '/' {
-			// `//` reduction is lexed only after a binary expression
-			// position; in our streaming lexer we just emit it and
-			// let downstream consumers disambiguate. (Note: in
-			// practice `//` appears as a comment, which has been
-			// handled already in skipWS.)
+			// `//` is the divide-reduction prefix operator (v0.14). It
+			// was a line-comment lead-in before v0.14; the `#`-comment
+			// branch in skipWS replaced that.
 			l.advance()
 			return Tok{Kind: TkSlashSlash, Lit: "//", Range: Range{Start: start, End: l.pos()}}
 		}
