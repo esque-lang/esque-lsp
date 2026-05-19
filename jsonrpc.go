@@ -38,6 +38,12 @@ const (
 	errInternalError  = -32603
 )
 
+// maxMsgSize caps the Content-Length we are willing to allocate for a
+// single JSON-RPC message. LSP messages are routinely under 1 MiB; 16
+// MiB is a comfortable ceiling that prevents a malformed or hostile
+// header from triggering an OOM allocation.
+const maxMsgSize = 16 << 20
+
 // conn is the framed JSON-RPC transport between the server and a
 // single client (the editor).
 type conn struct {
@@ -62,16 +68,20 @@ func (c *conn) readMessage() (*rawMessage, error) {
 		if line == "" {
 			break
 		}
-		if strings.HasPrefix(strings.ToLower(line), "content-length:") {
-			n, err := strconv.Atoi(strings.TrimSpace(line[len("Content-Length:"):]))
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(parts[0])) == "content-length" {
+			n, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 			if err != nil {
 				return nil, fmt.Errorf("bad Content-Length: %v", err)
 			}
 			contentLen = n
 		}
 	}
-	if contentLen <= 0 {
-		return nil, fmt.Errorf("missing Content-Length header")
+	if contentLen <= 0 || contentLen > maxMsgSize {
+		return nil, fmt.Errorf("content-length out of range: %d", contentLen)
 	}
 	buf := make([]byte, contentLen)
 	if _, err := io.ReadFull(c.in, buf); err != nil {

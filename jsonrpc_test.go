@@ -103,8 +103,39 @@ func TestConnMissingContentLength(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing Content-Length, got success")
 	}
-	if !strings.Contains(err.Error(), "Content-Length") {
-		t.Errorf("error %q should mention Content-Length", err)
+	if !strings.Contains(strings.ToLower(err.Error()), "content-length") {
+		t.Errorf("error %q should mention content-length", err)
+	}
+}
+
+// TestConnOversizedContentLength asserts that a Content-Length above
+// the configured ceiling is rejected before any allocation is made,
+// preventing a hostile or malformed header from triggering an OOM.
+func TestConnOversizedContentLength(t *testing.T) {
+	wire := "Content-Length: 999999999999\r\n\r\n"
+	in := newConn(strings.NewReader(wire), io.Discard)
+	_, err := in.readMessage()
+	if err == nil {
+		t.Fatal("expected error for oversized Content-Length, got success")
+	}
+	if !strings.Contains(err.Error(), "out of range") {
+		t.Errorf("error %q should mention out of range", err)
+	}
+}
+
+// TestConnHeaderWithSpaceBeforeColon verifies the SplitN-based parse
+// extracts the right value even when the header is formatted with a
+// space before the colon (forbidden by RFC 7230 but seen in the wild).
+func TestConnHeaderWithSpaceBeforeColon(t *testing.T) {
+	body := `{"jsonrpc":"2.0","method":"ping"}`
+	wire := "content-length : " + itoa(len(body)) + "\r\n\r\n" + body
+	in := newConn(strings.NewReader(wire), io.Discard)
+	m, err := in.readMessage()
+	if err != nil {
+		t.Fatalf("readMessage: %v", err)
+	}
+	if m.Method != "ping" {
+		t.Errorf("method = %q, want %q", m.Method, "ping")
 	}
 }
 
